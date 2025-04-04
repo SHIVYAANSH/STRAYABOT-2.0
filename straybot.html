@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>StrayGennie AI - Chat Assistant</title>
+    <!-- Prism.js for syntax highlighting -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.27.2/axios.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script>hljs.highlightAll();</script>
+    <style>
+
+
+
+
+
+        .menu-container {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000; /* Ensures it stays above other elements */
+        }
+        
+        .menu-icon {
+            font-size: 24px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.7); /* Optional: Background for better visibility */
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 40px; /* Push it below the menu icon */
+            right: 0;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            width: 150px;
+        }
+        
+        .dropdown-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .dropdown-menu li {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .dropdown-menu li:last-child {
+            border-bottom: none;
+        }
+        
+        .dropdown-menu a {
+            text-decoration: none;
+            color: black;
+            display: block;
+        }
+        
+        .dropdown-menu a:hover {
+            background: #f1f1f1;
+        }
+        
+        /* Show dropdown when active */
+        .menu-container.active .dropdown-menu {
+            display: block;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-image: url('user.png');
+           
+          
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #f4f4f4;
+        }
+        .chat-container {
+            width: 90%;
+            max-width: 400px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            background: #007bff;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            max-height: 60vh;
+        }
+        .chat-input {
+            display: flex;
+            border-top: 1px solid #ddd;
+            padding: 10px;
+            background: #fff;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            outline: none;
+            border-radius: 5px;
+            background: #f0f0f0;
+        }
+        .chat-input button {
+            margin-left: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .chat-input button:hover {
+            background: #0056b3;
+        }
+        @media (max-width: 600px) {
+            .chat-container {
+                width: 95%;
+                max-height: 80vh;
+            }
+            .chat-header {
+                font-size: 16px;
+                padding: 10px;
+            }
+            .chat-input input {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .chat-input {
+                flex-direction: column;
+                padding: 10px;
+            }
+        
+            .chat-input input {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        
+            .chat-input button {
+                width: 100%;
+            }
+        }
+@media (max-width: 600px) {
+    .message {
+        max-width: 90%;
+        font-size: 14px;
+    }
+}
+@media (max-width: 480px) {
+    h2 {
+        font-size: 30px;
+    }
+    
+    p {
+        font-size: 16px;
+    }
+}
+body {
+    overflow-x: hidden;
+}
+        
+        
+
+
+        
+        
+        @keyframes rgbAnimation {
+            0% { color: #ff0000; }
+            25% { color: #00ff00; }
+            50% { color: #0000ff; }
+            75% { color: #ff00ff; }
+            100% { color: #ff0000; }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 5px rgba(255, 255, 255, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.9); }
+            100% { box-shadow: 0 0 5px rgba(255, 255, 255, 0.5); }
+        }
+        
+        .welcome-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 1.5s ease-in-out, rgbAnimation 4s infinite linear;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+        }
+        
+        .welcome-message img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+            border: 3px solid white;
+            animation: pulseGlow 2s infinite alternate;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            outline: none;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transition: 0.3s ease-in-out;
+        }
+        
+        .chat-input input:focus {
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+        }
+        
+        * { margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(135deg, #1e1e2e, #252545);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+        color: #fff;
+    }
+    .chat-container {
+      
+        width: 500vh;
+        max-width: 1000px;
+        height: 89vh;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        width: 150vh;
+    
+    height: 89vh;
+    }
+    .chat-header {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 15px;
+        text-align: center;
+        font-size: 20px;
+        font-weight: 600;
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+    }
+    .chat-box {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        scrollbar-width: none;
+    }
+    .chat-box::-webkit-scrollbar {
+        display: none;
+    }
+    .message {
+        max-width: 75%;
+        padding: 12px;
+        margin: 8px;
+        border-radius: 12px;
+        position: relative;
+        word-wrap: break-word;
+    }
+    .user-message {
+        background: linear-gradient(120deg, #6a11cb, #2575fc);
+        align-self: flex-end;
+        color: #fff;
+    }
+    .ai-message {
+        background: rgba(255, 255, 255, 0.2);
+        align-self: flex-start;
+        color: #eee;
+    }
+    .chat-input {
+        display: flex;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.103);
+        border-bottom-left-radius: 20px;
+        border-bottom-right-radius: 20px;
+    }
+    .chat-input input {
+        flex: 1;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        outline: none;
+        font-size: 16px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        transition: 0.3s;
+    }
+    .chat-input input::placeholder {
+        color: rgba(255, 255, 255, 0.7);
+    }
+    .chat-input input:focus {
+        background: rgba(255, 255, 255, 0.3);
+    }
+    .chat-input button {
+        background: linear-gradient(120deg, #ff6a00, #ee0979);
+        color: white;
+        border: none;
+        padding: 12px 18px;
+        margin-left: 10px;
+        border-radius: 50px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: 0.3s;
+    }
+    .chat-input button:hover {
+        transform: scale(1.05);
+        filter: brightness(1.2);
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .message {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    p{
+        color:#ffffff;
+        font-size: 30px;
+    }
+    .welcome-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #ddd;
+    }
+    .welcome-message img {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        margin-bottom: 10px;
+        border: 3px solid white;
+    }
+
+.user-info {
+    font-size: 18px;
+    margin: 20px 0;
+}
+
+/* Sidebar styling */
+#sidebar {
+    position: fixed;
+    top: 0;
+    left: 0; /* Sidebar is initially on the left side */
+    height: 100%;
+    width: 280px; /* Sidebar width */
+    background-color: #1F2937; /* Dark grayish-blue for modern look */
+    color: white;
+    transition: width 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-shadow: 3px 0px 15px rgba(0, 0, 0, 0.4);
+    cursor: move; /* Indicating the sidebar can be dragged */
+}
+
+/* Sidebar content styling */
+#sidebar-content {
+    flex-grow: 1;
+    display: block;
+}
+
+/* Toggle button styling */
+#toggle-btn {
+    position: absolute;
+    right: -22px; /* Move the toggle button outside */
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    background-color: #2D3748; /* Darker button color */
+    color: white;
+    font-size: 24px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+    transition: right 0.3s ease, background-color 0.3s ease;
+}
+
+/* When the sidebar is minimized */
+#sidebar.minimized {
+    width: 0;
+    box-shadow: none;
+}
+
+/* Hide content when sidebar is minimized */
+#sidebar.minimized #sidebar-content {
+    display: none;
+}
+
+/* When sidebar is minimized, adjust main content */
+#sidebar.minimized + #main-content {
+    margin-left: 10px;
+}
+
+/* Change arrow inside the toggle button */
+#toggle-arrow {
+    font-size: 22px;
+    transition: transform 0.3s ease;
+}
+
+/* Sidebar content links (example styling) */
+#sidebar-content a {
+    text-decoration: none;
+    color: #A0AEC0; /* Light grayish color for links */
+    margin: 15px 0;
+    font-size: 16px;
+    transition: color 0.3s ease;
+}
+
+#sidebar-content a:hover {
+    color: #E2E8F0; /* Lighten color on hover */
+}
+
+/* When the sidebar is expanded, move the toggle button */
+#sidebar:not(.minimized) #toggle-btn {
+    right: -48px; /* Move button further outside when expanded */
+}
+
+/* Button hover effect */
+#toggle-btn:hover {
+    background-color: #4A5568; /* Slightly lighter on hover */
+}
+
+H2{
+    font-family: cursive;
+    font-size: 50PX;
+    color:#ebd2db
+}
+/* Improved style for the "AI is thinking..." notification */
+.thinking-notification {
+    
+    display: none; /* Initially hidden */
+    background-color: #0a9a3f; /* Yellowish-orange color */
+    padding: 15px 25px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    position: fixed;
+    top: 20px;
+    left: 45%;
+    transform: translateX(-50%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 999;
+    max-width: 300px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: slideIn 0.5s ease-in-out;
+    transition: opacity 0.5s ease-out;
+    opacity: 1;
+    animation: bounce 1s infinite; /* Bouncing effect */
+}
+
+
+
+/* Animation for sliding in */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        top: -50px;
+    }
+    to {
+        opacity: 1;
+        top: 20px;
+    }
+}
+
+/* Animation for the badge (bouncing effect) */
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Fade-out animation */
+@keyframes fadeOut {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        top: -50px;
+    }
+}
+
+/* Animation for fading out the thinking notification */
+.fade-out {
+    animation: fadeOut 0.5s forwards;
+}
+h3{
+    text-align: center;
+    color:#A0AEC0
+}
+
+.btn-sign-out {
+    background-color: #ff4d4d;
+    color: white;
+    font-size: 14px;
+    padding: 8px 10px; /* Increased height by adjusting top/bottom padding */
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    width: 100px; /* Fixed width for a mini button */
+    text-align: center;
+    display: inline-block; /* Ensures the button is aligned properly */
+}
+.btn-sign-out:hover {
+    background-color: #e04d4d;
+}
+.menu-container {
+    position: fixed;
+    display: inline-block;
+    cursor: pointer;
+  }
+
+  .menu-icon {
+    margin-left:800px;
+    font-size: 24px;
+    color: rgb(234, 234, 234);
+  }
+
+  .dropdown-menu {
+    border-radius: 5px;
+    display: none;
+    position: absolute;
+    top: 25px;
+    right: 0;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    
+  }
+
+  .dropdown-menu ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    border-radius: 50px;
+  }
+
+  .dropdown-menu ul li {
+    border-radius: 5px;
+    padding: 8px 16px;
+  }
+
+  .dropdown-menu ul li a {
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-decoration: none;
+    color: black;
+  }
+
+  .dropdown-menu ul li:hover {
+    background-color: #ddd;
+  }
+
+/* Follow me for more pens like this! */
+
+.back-button {
+    background-color:transparent; /* Green */
+    color: white;
+    padding:15px ;
+    text-align: center;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: fixed;
+}
+
+.back-button:hover {
+    background-color: rgba(70, 7, 152, 0.195); /* Light green background on hover */
+    transform: scale(1.05);
+}
+
+.back-button:active {
+    transform: scale(1);
+}
+
+.back-button i {
+    margin-right: 10px;
+}
+
+
+
+
+
+
+  
+    </style>
+</head>
+
+
+
+<body>
+  
+
+
+
+   
+    <div class="chat-container">
+        
+       
+        <div class="chat-header">StrayGennie AI </div>
+        <div class="menu-container">
+            
+            <div class="dropdown-menu" id="dropdownMenu">
+              <ul>
+               
+               
+                <li onclick="signOut()"><a href="#">Sign Out</a></li>
+              </ul>
+            </div>
+          </div>
+
+       
+
+
+          
+          <!-- Menu Container for Model Version Selection (Left Side) -->
+
+       
+
+
+          
+               
+       
+       
+        <div class="chat-box" id="chatBox">
+          
+            
+            <div class="welcome-message" id="welcomeMessage">
+                <img id="user-img" src="https://images-platform.99static.com//5UVmo34lvV8g_hpGoYc1U008wT8=/497x2491:998x2992/fit-in/500x500/99designs-contests-attachments/104/104308/attachment_104308310" alt="User Profile">
+                
+                <p id="user-info"> </p>
+                <p >StrayGennie AI! </p>
+                
+            </div>
+            <div class="user-info" id="user-info">
+                <!-- User info will be displayed here -->
+            </div>
+            <button class="back-button" onclick="goBack()">
+                <i>&larr;</i> Go Back
+            </button>
+        
+            <div class="chat-box" id="chatBox">
+
+                
+   
+    
+   
+</div>
+
+
+        </div>
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="Type to change the world..." onkeypress="handleKeyPress(event)">
+            <br>
+            
+
+ 
+           <b> <button id="send-btn"onclick="sendMessage()">Send</button><br>
+        
+        </div>
+       <h3>**StrayGennie can make errors**</h3>
+      
+    </div>
+    
+    
+    <div id="thinkingNotification" class="thinking-notification">
+        <span> thinking...</span>
+        <span id="notificationBadge" class="notification-badge">!</span>
+        
+    </div>
+    
+    
+
+    
+
+    <script>
+        const API_KEY = "AIzaSyALlMBZRyrD3Wyxi_7u8abRMR184uupBwY";
+        let typingInProgress = false;
+        let typingTimeout;
+        let chatHistory = [];  // Stores conversation history
+        const MAX_HISTORY = 5; // Limit conversation history to last 5 messages
+    
+        window.onload = function () {
+            const thinkingNotification = document.getElementById("thinkingNotification");
+            thinkingNotification.style.display = "none"; // Make sure it's hidden when the page loads
+        };
+    
+        // Handle keypress for sending message
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        }
+    
+        // Function to adjust the response length (word limit)
+        function adjustResponseLength(responseText, maxWordCount) {
+            const words = responseText.split(' ');
+            if (words.length > maxWordCount) {
+                return words.slice(0, maxWordCount).join(' ') + '...'; // Truncate and add '...'
+            }
+            return responseText;
+        }
+    
+        async function sendMessage() {
+            const sendbtn = document.getElementById("send-btn");
+            if (sendbtn.innerText === "stop") {
+                stopTypingEffect();
+                return;
+            }
+    
+            const userInput = document.getElementById("userInput");
+            const chatBox = document.getElementById("chatBox");
+            const welcomeMessage = document.getElementById("welcomeMessage");
+            const message = userInput.value.trim();
+            if (message === "") return;
+            welcomeMessage.style.display = "none"; // Hide welcome message after user starts chatting
+    
+            addMessage(message, "user-message"); // Add user message to chat
+            userInput.disabled = true;
+            sendbtn.innerText = 'stop';
+    
+            userInput.value = "";
+            chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom of the chat box
+    
+            // Show "AI is thinking" notification
+            const thinkingNotification = document.getElementById("thinkingNotification");
+            thinkingNotification.style.display = "flex"; // Make it visible
+    
+            // Add user message to chat history
+            chatHistory.push({ role: "user", parts: [{ text: message }] });
+    
+            // Trim history to maintain context length
+            if (chatHistory.length > MAX_HISTORY) {
+                chatHistory.shift(); // Remove the oldest message
+            }
+    
+            try {
+                const response = await axios.post(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+                    { contents: chatHistory },  // Send full chat history
+                    {
+                        headers: { "Content-Type": "application/json" },
+                        params: { key: API_KEY },
+                    }
+                );
+    
+                let responseText = response.data.candidates[0].content.parts[0].text;
+    
+                // Replace predefined AI responses if needed
+                const unwantedPhrases = [
+                    "I am a large language model",
+                    "I am an AI created by OpenAI."
+                ];
+                const customResponses = [
+                    "I am StrayGennie AI, trained by StrayGennie .",
+                    "Hello! I am StrayGennie AI, created by StrayGennie  to assist you.",
+                    "I am Corbel AI, here to help you with any questions you may have.",
+                    "StrayGennie AI, at your service! Powered by StrayGennie ."
+                ];
+    
+                for (const phrase of unwantedPhrases) {
+                    if (responseText.includes(phrase)) {
+                        // Select a random response from the customResponses array
+                        responseText = customResponses[Math.floor(Math.random() * customResponses.length)];
+                        break;
+                    }
+                }
+    
+                // Adjust the response length (e.g., limit to 500 words)
+                const adjustedResponse = adjustResponseLength(responseText, 500);
+    
+                addMessage(adjustedResponse, "ai-message", true); // Add AI response to chat with animation
+                thinkingNotification.style.display = "none"; // Hide "thinking" notification after response
+    
+                // Add AI response to chat history for context
+                chatHistory.push({ role: "model", parts: [{ text: responseText }] });
+    
+                // Trim history to maintain size
+                if (chatHistory.length > MAX_HISTORY) {
+                    chatHistory.shift();
+                }
+    
+            } catch (error) {
+                console.error("Error fetching AI response:", error);
+                addMessage("Sorry, I encountered an error. Please try again.", "ai-message");
+                thinkingNotification.style.display = "none"; // Hide "thinking" notification in case of error
+            }
+        }
+    
+        // Function to add message to chat box
+        function addMessage(text, className, isAnimated = false) {
+            const chatBox = document.getElementById("chatBox");
+            const messageDiv = document.createElement("div");
+            messageDiv.classList.add("message", className);
+            chatBox.appendChild(messageDiv);
+    
+            if (isAnimated) {
+                typingInProgress = true;
+                typeWriterEffect(messageDiv, text);
+            } else {
+                messageDiv.textContent = text;
+            }
+    
+            chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom of the chat box
+        }
+    
+        // Function for typing animation effect
+        function typeWriterEffect(element, text, i = 0) {
+            if (!typingInProgress) return; // Stop animation if interrupted
+            
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i);
+                typingTimeout = setTimeout(() => typeWriterEffect(element, text, i + 1), 10);
+            } else {
+                stopTypingEffect();
+            }
+        }
+    
+        // Function to stop typing animation
+        function stopTypingEffect() {
+            typingInProgress = false;
+            clearTimeout(typingTimeout);
+            document.getElementById("userInput").disabled = false;
+            document.getElementById("send-btn").innerText = 'Send';
+        }
+    
+        // Firebase configuration and authentication
+    
+        function signOut() {
+            window.location.href = "LOGIN.html"; // Redirect to login page after sign out
+        }
+    
+        function toggleMenu() {
+            var menu = document.getElementById('dropdownMenu');
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        }
+    
+        // Close the dropdown if the user clicks outside of it
+        window.onclick = function(event) {
+            if (!event.target.matches('.menu-container, .menu-container *')) {
+                var dropdowns = document.getElementsByClassName("dropdown-menu");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.style.display === 'block') {
+                        openDropdown.style.display = 'none';
+                    }
+                }
+            }
+        }
+    
+        // Function to toggle the visibility of the dropdown menus
+        function toggleMenu2() {
+            const menu = document.getElementById(menuId);
+            if (menu.style.display === 'block') {
+                menu.style.display = 'none';
+            } else {
+                menu.style.display = 'block';
+            }
+        }
+    
+        // Function to set the selected model version in the dropdown
+        function selectModel(modelName) {
+            const dropdownBtn = document.querySelector('.dropdown-btn');
+            dropdownBtn.innerHTML = `: ${modelName}`; // Update button text with the selected model
+            toggleMenu('dropdownMenuModel'); // Close the dropdown after selection
+        }
+    
+        function goBack() {
+            window.location.href = "index.html";  // Navigate to choice-chat.html
+        }
+    
+    </script>
+    
+</body>
+</html>
